@@ -2,25 +2,55 @@ import { request } from "node:https";
 import { WebSocket } from "node:http";
 import { readFileSync } from "node:fs";
 import { exec } from "node:child_process";
-import { exit } from "node:process";
+
+const MAX_PAGE_SIZE = 27 + (255 * 255);
 
 const pages = [];
-let page = null;//Buffer.alloc(0);
 
-const exe = exec(`.\\bin\\yt-dlp.exe https://www.youtube.com/watch?v=X2gDR4b9Lk8 -x -o -`, {
+let interval = null;
+let level = 1;
+let raw = Buffer.alloc(0);
+let i = 0;
+let complete;
+
+const exe = exec(`.\\bin\\yt-dlp.exe https://www.youtube.com/watch?v=KIXP--0-Tac -x -o -`, {
     maxBuffer: 2 ** 32,
     encoding: "buffer"
 }, (error, stdout, stderr) => {
-    console.log(error);
-    console.log(stderr);
+    // console.log(error);
+    // console.log(stderr);
     console.log(stdout.length);
+    console.log(raw.length);
+    console.log(pages.length);
 });
+
 exe.stdout.on("data", (chunk) => {
-    if (page == null) {
-        
+    raw = Buffer.concat([raw, chunk]);
+    console.log(`raw length: ${raw.length}`)
+    console.log(`level: ${MAX_PAGE_SIZE * level}`)
+    if (raw.length >= MAX_PAGE_SIZE * level) {
+        while (i < raw.length) {
+            pages.push(i);
+            let pageSize = 27 + raw[i + 26];
+            for (let j = i + 27; j < i + raw[i + 26]; j++) {
+                pageSize += raw[j];
+            }
+            i += pageSize;
+        }
+        level++;
     }
-    //console.log(chunk);
 });
+
+while (!exe.stdout.closed) {
+    if (i < raw.length) {
+        pages.push(i);
+        let pageSize = 27 + raw[i + 26];
+        for (let j = i + 27; j < i + raw[i + 26]; j++) {
+            pageSize += raw[j];
+        }
+        i += pageSize;
+    }
+}
 
 // const token = readFileSync("./token", {encoding: "utf8"});
 // let raw = "";
