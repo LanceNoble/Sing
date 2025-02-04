@@ -1,68 +1,59 @@
 import { request } from "node:https";
 import { WebSocket } from "node:http";
-import { constants } from "node:fs";
+import { constants, readFileSync } from "node:fs";
 import { exec } from "node:child_process";
-import { open } from "node:fs/promises";
+import { open, rm } from "node:fs/promises";
 import { exit } from "node:process";
 
 const MAX_PAGE_SIZE = 27 + (255 * 255);
-
 const pages = [];
-
-let raw = Buffer.alloc(0);
-let complete = Buffer.alloc(0);
 let i = 0;
+let raw = Buffer.alloc(0);
 let song = 0;
-
-let fileHandle;
-try {
-    fileHandle = await open(`./songs/song${song}.opus`, constants.O_CREAT | constants.O_RDONLY);
-} catch (e) {
-    console.error(e);
-    exit();
-}
-
-const interval = setInterval(async () => {
-    console.log(await fileHandle.read());
-}, 1000);
-
-exec(`.\\bin\\yt-dlp.exe -x -o "./songs/song${song++}" KIXP--0-Tac`, {
-    maxBuffer: 2 ** 32,
-    encoding: "buffer"
-}, (error, stdout, stderr) => {
-    
+const file = await open(`./songs/song${song}.opus`, constants.O_CREAT | constants.O_RDONLY);
+const process = exec(`.\\bin\\yt-dlp.exe https://www.youtube.com/watch?v=KIXP--0-Tac -x -o "./songs/song${song}"`, async (error, stdout, stderr) => {
+    try {
+        await file.close();
+    } catch (e) {
+        console.error(e);
+        exit();
+    }
+    const test = readFileSync(`./songs/song${song}.opus`);
+    console.log(test);
+    console.log(raw);
+    console.log(pages.length);
+    for (let i = 0; i < pages.length; i++) {
+        //console.log(pages[i]);
+    }
+    await rm(`./songs/song${song++}.opus`);
 });
-
-
-
-
-//const 
-
-// exe.stdout.on("data", (chunk) => {
-//     //console.log(chunk)
-//     //raw = Buffer.concat([raw, chunk]);
-//     // complete = Buffer.concat([complete, chunk]);
-//     // if (complete.length >= MAX_PAGE_SIZE) {
-//     //     raw = Buffer.concat([raw, complete]);
-//     //     complete = Buffer.alloc(0);
-//     // }
-    
-// });
-
-/*
-const interval = setInterval(() => {
-    if (i < raw.length) {
-        //pages.push(i);
-        let pageSize = 27 + raw[i + 26];
-        for (let j = i + 27; j < i + raw[i + 26]; j++) {
-            pageSize += raw[j];
-        }
-        //pages.push(Buffer.from(raw.buffer, i, pageSize));
-        i += pageSize;
-        //console.log(pages[pages.length - 1]);
+const mark = setInterval(() => {
+    // while (i + 26 < raw.byteLength && i + 26 + raw[i + 26] < raw.byteLength) {
+    //     let pageSize = 27 + raw[i + 26];
+    //     for (let j = i + 27; j < i + raw[i + 26]; j++) {
+    //         pageSize += raw[j];
+    //     }
+    //     pages.push(Buffer.from(raw.buffer, i, pageSize));
+    //     i += pageSize;
+    // }
+    // while (i + 4 <= raw.byteLength && Buffer.from(raw, i, 4).toString() !== "OggS\0") {
+    //     i++;
+    // }
+    pages.push(i);
+    if (process.exitCode != null) {
+        clearInterval(mark);
     }
 });
-*/
+const pipe = setInterval(async () => {
+    let chunk = await file.read();
+    while (chunk.bytesRead > 0) {
+        raw = Buffer.concat([raw, Buffer.from(chunk.buffer.buffer, 0, chunk.bytesRead)]);
+        chunk = await file.read();
+    }
+    if (process.exitCode != null) {
+        clearInterval(pipe);
+    }
+});
 
 // const token = readFileSync("./token", {encoding: "utf8"});
 // let raw = "";
