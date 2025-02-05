@@ -6,7 +6,7 @@ import { open, rm } from "node:fs/promises";
 import { exit } from "node:process";
 
 const MAX_PAGE_SIZE = 27 + (255 * 255);
-const pages = [];
+let pages = [];
 let i = 0;
 let raw = Buffer.alloc(0);
 let song = 0;
@@ -20,6 +20,32 @@ const process = exec(`.\\bin\\yt-dlp.exe https://www.youtube.com/watch?v=KIXP--0
     }
     const test = readFileSync(`./songs/song${song}.opus`);
     console.log(test);
+    for (let i = 0; i < test.byteLength;) {
+        const numSegs = test[i + 26];
+        const szHead = 27 + numSegs;
+
+        let pageSize = szHead;
+        Buffer.from(test.buffer, i + 27, numSegs).forEach((v, j, a) => {
+            pageSize += v;
+        });
+
+        pages.push(Buffer.from(test.buffer, i, pageSize));
+        i += pageSize;
+    }
+    console.log(pages.length);
+    pages = [];
+    for (let i = 0; i < raw.byteLength;) {
+        const numSegs = raw[i + 26];
+        const szHead = 27 + numSegs;
+
+        let pageSize = szHead;
+        Buffer.from(raw.buffer, i + 27, numSegs).forEach((v, j, a) => {
+            pageSize += v;
+        });
+
+        pages.push(Buffer.from(raw.buffer, i, pageSize));
+        i += pageSize;
+    }
     console.log(raw);
     console.log(pages.length);
     for (let i = 0; i < pages.length; i++) {
@@ -39,7 +65,7 @@ const mark = setInterval(() => {
     // while (i + 4 <= raw.byteLength && Buffer.from(raw, i, 4).toString() !== "OggS\0") {
     //     i++;
     // }
-    pages.push(i);
+    //pages.push(i);
     if (process.exitCode != null) {
         clearInterval(mark);
     }
