@@ -5,81 +5,71 @@ import { exec } from "node:child_process";
 import { open, rm } from "node:fs/promises";
 import { exit } from "node:process";
 
-const MAX_PAGE_SIZE = 27 + (255 * 255);
-let pages = [];
-let i = 0;
-let raw = Buffer.alloc(0);
-let song = 0;
-const file = await open(`./songs/song${song}.opus`, constants.O_CREAT | constants.O_RDONLY);
-const process = exec(`.\\bin\\yt-dlp.exe https://www.youtube.com/watch?v=KIXP--0-Tac -x -o "./songs/song${song}"`, async (error, stdout, stderr) => {
-    try {
+function strip(buf) {
+    if (buf.byteLength < 27) {
+        return [0, 0];
+    }
+    let i = 0;
+    while (i + 4 <= buf.byteLength && buf[i++] != 0x4f || buf[i++] != 0x67 || buf[i++] != 0x67 || buf[i++] != 0x53) {
+        
+    }
+    const numSegs = buf[i + 22];
+    const szHead = 27 + numSegs;
+    if (buf.byteLength < szHead) {
+        return 0;
+    }
+    let pageSize = szHead;
+    Buffer.from(buf.buffer)
+}
+
+async function pipe(code, exe, out, call) {
+    const pages = [];
+
+    let i = 0;
+    let raw = Buffer.alloc(0);
+
+    const file = await open(`${out}${code}.opus`, constants.O_CREAT | constants.O_RDONLY);
+    if (file.fd == -1) {
+        return pages;
+    }
+
+    const process = exec(`${exe} ${code} -x -o "${out}${code}.opus"`, async (error, stdout, stderr) => {
         await file.close();
-    } catch (e) {
-        console.error(e);
-        exit();
-    }
-    const test = readFileSync(`./songs/song${song}.opus`);
-    console.log(test);
-    for (let i = 0; i < test.byteLength;) {
-        const numSegs = test[i + 26];
-        const szHead = 27 + numSegs;
+        await rm(`${out}${code}.opus`);
+        return pages;
+    });
 
-        let pageSize = szHead;
-        Buffer.from(test.buffer, i + 27, numSegs).forEach((v, j, a) => {
-            pageSize += v;
-        });
+    setInterval(async function () {
+        let chunk = await file.read();
+        while (chunk.bytesRead > 0) {
+            raw = Buffer.concat([raw, Buffer.from(chunk.buffer.buffer, 0, chunk.bytesRead)]);
+            chunk = await file.read();
+        }
+        if (process.exitCode != null) {
+            clearInterval(this);
+        }
+    });
 
-        pages.push(Buffer.from(test.buffer, i, pageSize));
-        i += pageSize;
-    }
-    console.log(pages.length);
-    pages = [];
-    for (let i = 0; i < raw.byteLength;) {
-        const numSegs = raw[i + 26];
-        const szHead = 27 + numSegs;
+    setInterval(function () {
+        while (i < raw.byteLength) {
+            const numSegs = test[i + 26];
+            const szHead = 27 + numSegs;
 
-        let pageSize = szHead;
-        Buffer.from(raw.buffer, i + 27, numSegs).forEach((v, j, a) => {
-            pageSize += v;
-        });
+            let pageSize = szHead;
+            Buffer.from(raw.buffer, i + 27, numSegs).forEach((v, j, a) => {
+                pageSize += v;
+            });
 
-        pages.push(Buffer.from(raw.buffer, i, pageSize));
-        i += pageSize;
-    }
-    console.log(raw);
-    console.log(pages.length);
-    for (let i = 0; i < pages.length; i++) {
-        //console.log(pages[i]);
-    }
-    await rm(`./songs/song${song++}.opus`);
-});
-const mark = setInterval(() => {
-    // while (i + 26 < raw.byteLength && i + 26 + raw[i + 26] < raw.byteLength) {
-    //     let pageSize = 27 + raw[i + 26];
-    //     for (let j = i + 27; j < i + raw[i + 26]; j++) {
-    //         pageSize += raw[j];
-    //     }
-    //     pages.push(Buffer.from(raw.buffer, i, pageSize));
-    //     i += pageSize;
-    // }
-    // while (i + 4 <= raw.byteLength && Buffer.from(raw, i, 4).toString() !== "OggS\0") {
-    //     i++;
-    // }
-    //pages.push(i);
-    if (process.exitCode != null) {
-        clearInterval(mark);
-    }
-});
-const pipe = setInterval(async () => {
-    let chunk = await file.read();
-    while (chunk.bytesRead > 0) {
-        raw = Buffer.concat([raw, Buffer.from(chunk.buffer.buffer, 0, chunk.bytesRead)]);
-        chunk = await file.read();
-    }
-    if (process.exitCode != null) {
-        clearInterval(pipe);
-    }
-});
+            pages.push(Buffer.from(raw.buffer, i, pageSize));
+            i += pageSize;
+        }
+        if (process.exitCode != null) {
+            clearInterval(this);
+        }
+    });
+}
+
+export { pipe };
 
 // const token = readFileSync("./token", {encoding: "utf8"});
 // let raw = "";
