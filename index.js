@@ -9,16 +9,24 @@ function strip(buf) {
     if (buf.byteLength < 27) {
         return [0, 0];
     }
-    let i = 0;
-    while (i + 4 <= buf.byteLength && buf[i++] != 0x4f || buf[i++] != 0x67 || buf[i++] != 0x67 || buf[i++] != 0x53) {
-        
+    let i = -1;
+    while (++i + 4 <= buf.byteLength && (buf[i] != 0x4f || buf[i + 1] != 0x67 || buf[i + 2] != 0x67 || buf[i + 3] != 0x53));
+    if (i > buf.byteLength) {
+        return [0, 0];
     }
-    const numSegs = buf[i + 22];
+    const numSegs = buf[i + 26];
     const szHead = 27 + numSegs;
-    if (buf.byteLength < szHead) {
-        return 0;
+    let szPage = szHead;
+    if (buf.byteLength - i < szHead) {
+        return [i, 0];
     }
-    let pageSize = szHead;
+    for (let j = i + 27; j < numSegs; j++) {
+        szPage += buf[j]; 
+    }
+    if (buf.byteLength - i < szPage) {
+        return [i, 0];
+    }
+    return
     Buffer.from(buf.buffer)
 }
 
