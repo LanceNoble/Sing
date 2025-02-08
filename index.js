@@ -5,14 +5,10 @@ import { exec } from "node:child_process";
 import { open, rm } from "node:fs/promises";
 import { exit } from "node:process";
 
-function strip(buf) {
-    if (buf.byteLength < 27) {
-        return [0, 0];
-    }
-    let i = -1;
+function strip(buf, i) {
     while (++i + 4 <= buf.byteLength && (buf[i] != 0x4f || buf[i + 1] != 0x67 || buf[i + 2] != 0x67 || buf[i + 3] != 0x53));
-    if (i > buf.byteLength) {
-        return [0, 0];
+    if (buf.byteLength - i < 27) {
+        return [i, 0];
     }
     const numSegs = buf[i + 26];
     const szHead = 27 + numSegs;
@@ -26,9 +22,9 @@ function strip(buf) {
     if (buf.byteLength - i < szPage) {
         return [i, 0];
     }
-    return
-    Buffer.from(buf.buffer)
+    return [i, pageSize];
 }
+export {strip};
 
 async function pipe(code, exe, out, call) {
     const pages = [];

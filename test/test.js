@@ -1,7 +1,11 @@
-import { pipe } from "..";
+import { strip } from "../index.js";
 
-describe("pipe", function () {
-    it("should equal the size of the file containing audio from KIXP--0-Tac", function () {
-
-    });
+describe("strip", function () {
+    it("should return [0, 0] with a buffer length of 0 regardless of its content", function () {
+        const buf = Buffer.alloc(0);
+        const res = strip(buf, 0);
+        if (res[0] == 0 && res[1] == 0) {
+            throw new Error();
+        }
+    });    
 });
