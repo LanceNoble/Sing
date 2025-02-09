@@ -6,38 +6,40 @@ import { open, rm } from "node:fs/promises";
 import { exit } from "node:process";
 
 function strip(buf, i) {
-    while (++i + 4 <= buf.byteLength && (buf[i] != 0x4f || buf[i + 1] != 0x67 || buf[i + 2] != 0x67 || buf[i + 3] != 0x53));
-    if (buf.byteLength - i < 27) {
-        return [i, 0];
+    if (buf.byteLength - i < 27 || buf[i] != 0x4f || buf[i + 1] != 0x67 || buf[i + 2] != 0x67 || buf[i + 3] != 0x53) {
+        return 0;
     }
     const numSegs = buf[i + 26];
     const szHead = 27 + numSegs;
-    let szPage = szHead;
     if (buf.byteLength - i < szHead) {
-        return [i, 0];
+        return 0;
     }
+    let szPage = szHead;
     for (let j = i + 27; j < numSegs; j++) {
-        szPage += buf[j]; 
+        szPage += buf[j];
     }
     if (buf.byteLength - i < szPage) {
-        return [i, 0];
+        return 0;
     }
-    return [i, pageSize];
+    return szPage;
 }
-export {strip};
 
-async function pipe(code, exe, out, call) {
+async function pipe(code, exe, out) {
     const pages = [];
 
     let i = 0;
     let raw = Buffer.alloc(0);
 
-    const file = await open(`${out}${code}.opus`, constants.O_CREAT | constants.O_RDONLY);
+    const file = await open(`${out}${code}.opus`, constants.O_CREAT);
     if (file.fd == -1) {
         return pages;
     }
 
-    const process = exec(`${exe} ${code} -x -o "${out}${code}.opus"`, async (error, stdout, stderr) => {
+    const process = exec(`${exe} ${code} -x -o "${out}${code}"`, async (error, stdout, stderr) => {
+        console.log(stdout)
+        console.log(error)
+        console.log(stderr)
+        console.log(pages.length)
         await file.close();
         await rm(`${out}${code}.opus`);
         return pages;
@@ -56,16 +58,13 @@ async function pipe(code, exe, out, call) {
 
     setInterval(function () {
         while (i < raw.byteLength) {
-            const numSegs = test[i + 26];
-            const szHead = 27 + numSegs;
-
-            let pageSize = szHead;
-            Buffer.from(raw.buffer, i + 27, numSegs).forEach((v, j, a) => {
-                pageSize += v;
-            });
-
-            pages.push(Buffer.from(raw.buffer, i, pageSize));
-            i += pageSize;
+            const bounds = strip(raw, i);
+            i = bounds[0]
+            if (bounds[1] > 0) {
+                console.log(i)
+                pages.push(i);
+            }
+            i += bounds[1];
         }
         if (process.exitCode != null) {
             clearInterval(this);
@@ -73,62 +72,59 @@ async function pipe(code, exe, out, call) {
     });
 }
 
-export { pipe };
+console.log(await pipe("KIXP--0-Tac", ".\\bin\\yt-dlp.exe", ".\\songs\\"));
 
-// const token = readFileSync("./token", {encoding: "utf8"});
-// let raw = "";
+export { strip };
 
-// request({
-//     host: "discord.com",
-//     path: "/api/v10/gateway/bot",
-//     protocol: "https:",
-//     headers: {
-//         authorization: `Bot ${token}`
-//     }
-// }, (res) => {
-//     res.on("data", (chunk) => raw += chunk);
-//     res.on("end", () => {
-//         const ws = new WebSocket(`${JSON.parse(raw)["url"]}/?v=10&encoding=json`);
-//         ws.onmessage = (msg) => {
-//             const json = JSON.parse(msg.data);
-//             console.log(json);
-            
-//             if (json["op"] == 10) {
-//                 setTimeout(() => {
-//                     ws.send(JSON.stringify({
-//                         op: 1,
-//                         d: json["s"]
-//                     }));
-//                     ws.send(JSON.stringify({
-//                         op: 2,
-//                         d: {
-//                             token: token,
-//                             intents: 1 << 7,
-//                             properties: {
-//                                 os: "windows",
-//                                 browser: "nujabes",
-//                                 device: "nujabes"
-//                             }
-//                         }
-//                     }));
-//                     setInterval(() => {
-//                         ws.send(JSON.stringify({
-//                             op: 1,
-//                             d: json["s"]
-//                         }))
-//                     }, json["d"]["heartbeat_interval"]);
-//                 }, json["d"]["heartbeat_interval"] * 0/*Math.random()*/);
-//             }
-//             else if (json["op"] == 1) {
-//                 ws.send(JSON.stringify({
-//                     op: 1,
-//                     d: json["s"]
-//                 }));
-//             }
+const token = readFileSync("./token", { encoding: "utf8" });
+let raw = "";
 
-//             if (json["t"] == "INTERACTION_CREATE") {
-//                 const link = json["d"]["data"]["options"]["value"];
-//             }
-//         }
-//     });
-// }).end();
+request({
+    host: "discord.com",
+    path: "/api/v10/gateway/bot",
+    protocol: "https:",
+    headers: {
+        authorization: `Bot ${token}`
+    }
+}, (res) => {
+    res.on("data", (chunk) => raw += chunk);
+    res.on("end", () => {
+        const ws = new WebSocket(`${JSON.parse(raw)["url"]}/?v=10&encoding=json`);
+        ws.onmessage = (msg) => {
+            const json = JSON.parse(msg.data);
+            console.log(json);
+
+            if (json["op"] == 10) {
+                setTimeout(() => {
+                    ws.send(JSON.stringify({ op: 1, d: json["s"] }));
+                    ws.send(JSON.stringify({
+                        op: 2,
+                        d: {
+                            token: token,
+                            intents: 1 << 7,
+                            properties: {
+                                os: "windows",
+                                browser: "nujabes",
+                                device: "nujabes"
+                            }
+                        }
+                    }));
+                    setInterval(() => {
+                        ws.send(JSON.stringify({ op: 1, d: json["s"] }))
+                    }, json["d"]["heartbeat_interval"]);
+                }, json["d"]["heartbeat_interval"] * 0/*Math.random()*/);
+            }
+            else if (json["op"] == 1) {
+                ws.send(JSON.stringify({
+                    op: 1,
+                    d: json["s"]
+                }));
+            }
+
+            if (json["t"] == "INTERACTION_CREATE") {
+                const link = json["d"]["data"]["options"]["value"];
+                if ()
+            }
+        }
+    });
+}).end();
