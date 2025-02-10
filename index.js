@@ -5,6 +5,12 @@ import { exec } from "node:child_process";
 import { open, rm } from "node:fs/promises";
 import { exit } from "node:process";
 
+// try {
+//     console.log(await open("song.opus"));    
+// } catch (error) {
+// }
+// exit();
+
 function strip(buf, i) {
     if (buf.byteLength - i < 27 || buf[i] != 0x4f || buf[i + 1] != 0x67 || buf[i + 2] != 0x67 || buf[i + 3] != 0x53) {
         return 0;
@@ -72,28 +78,20 @@ async function pipe(code, exe, out) {
     });
 }
 
-console.log(await pipe("KIXP--0-Tac", ".\\bin\\yt-dlp.exe", ".\\songs\\"));
-
-export { strip };
-
 const token = readFileSync("./token", { encoding: "utf8" });
-let raw = "";
-
 request({
     host: "discord.com",
     path: "/api/v10/gateway/bot",
     protocol: "https:",
-    headers: {
-        authorization: `Bot ${token}`
-    }
+    headers: { authorization: `Bot ${token}` }
 }, (res) => {
+    let raw = "";
     res.on("data", (chunk) => raw += chunk);
     res.on("end", () => {
         const ws = new WebSocket(`${JSON.parse(raw)["url"]}/?v=10&encoding=json`);
-        ws.onmessage = (msg) => {
+        ws.onmessage = async (msg) => {
             const json = JSON.parse(msg.data);
             console.log(json);
-
             if (json["op"] == 10) {
                 setTimeout(() => {
                     ws.send(JSON.stringify({ op: 1, d: json["s"] }));
@@ -109,21 +107,22 @@ request({
                             }
                         }
                     }));
-                    setInterval(() => {
-                        ws.send(JSON.stringify({ op: 1, d: json["s"] }))
-                    }, json["d"]["heartbeat_interval"]);
+                    setInterval(() => ws.send(JSON.stringify({ op: 1, d: json["s"] })), json["d"]["heartbeat_interval"]);
                 }, json["d"]["heartbeat_interval"] * 0/*Math.random()*/);
             }
             else if (json["op"] == 1) {
-                ws.send(JSON.stringify({
-                    op: 1,
-                    d: json["s"]
-                }));
+                ws.send(JSON.stringify({ op: 1, d: json["s"] }));
             }
 
             if (json["t"] == "INTERACTION_CREATE") {
                 const link = json["d"]["data"]["options"]["value"];
-                if ()
+                try {
+                    await open("song.opus");
+                } catch (error) {
+
+                }
+                //const file = 
+                //if ()
             }
         }
     });

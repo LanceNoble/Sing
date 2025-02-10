@@ -17,8 +17,5 @@
     "url": "https://github.com/LanceNoble/Sing/issues"
   },
   "homepage": "https://github.com/LanceNoble/Sing#readme",
-  "type": "module",
-  "devDependencies": {
-    "mocha": "^11.1.0"
-  }
+  "type": "module"
 }
