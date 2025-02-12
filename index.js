@@ -5,12 +5,6 @@ import { exec } from "node:child_process";
 import { open, rm } from "node:fs/promises";
 import { exit } from "node:process";
 
-// try {
-//     console.log(await open("song.opus"));    
-// } catch (error) {
-// }
-// exit();
-
 function strip(buf, i) {
     if (buf.byteLength - i < 27 || buf[i] != 0x4f || buf[i + 1] != 0x67 || buf[i + 2] != 0x67 || buf[i + 3] != 0x53) {
         return 0;
