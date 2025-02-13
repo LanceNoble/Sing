@@ -5,25 +5,6 @@ import { exec } from "node:child_process";
 import { open, rm } from "node:fs/promises";
 import { exit } from "node:process";
 
-function strip(buf, i) {
-    if (buf.byteLength - i < 27 || buf[i] != 0x4f || buf[i + 1] != 0x67 || buf[i + 2] != 0x67 || buf[i + 3] != 0x53) {
-        return 0;
-    }
-    const numSegs = buf[i + 26];
-    const szHead = 27 + numSegs;
-    if (buf.byteLength - i < szHead) {
-        return 0;
-    }
-    let szPage = szHead;
-    for (let j = i + 27; j < numSegs; j++) {
-        szPage += buf[j];
-    }
-    if (buf.byteLength - i < szPage) {
-        return 0;
-    }
-    return szPage;
-}
-
 async function pipe(code, exe, out) {
     const pages = [];
 
@@ -113,10 +94,10 @@ request({
                 try {
                     await open("song.opus");
                 } catch (error) {
-
+                    const file = await open("song.opus", constants.O_CREAT);
+                    await file.close();
+                    await rm("song.opus");
                 }
-                //const file = 
-                //if ()
             }
         }
     });
