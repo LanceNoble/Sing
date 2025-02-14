@@ -54,12 +54,7 @@ async function pipe(code, exe, out) {
 }
 
 const token = readFileSync("./token", { encoding: "utf8" });
-request({
-    host: "discord.com",
-    path: "/api/v10/gateway/bot",
-    protocol: "https:",
-    headers: { authorization: `Bot ${token}` }
-}, (res) => {
+request({ host: "discord.com", path: "/api/v10/gateway/bot", protocol: "https:", headers: { authorization: `Bot ${token}` } }, (res) => {
     let raw = "";
     res.on("data", (chunk) => raw += chunk);
     res.on("end", () => {
@@ -90,14 +85,29 @@ request({
             }
 
             if (json["t"] == "INTERACTION_CREATE") {
-                const link = json["d"]["data"]["options"]["value"];
-                try {
-                    await open("song.opus");
-                } catch (error) {
-                    const file = await open("song.opus", constants.O_CREAT);
-                    await file.close();
-                    await rm("song.opus");
-                }
+                raw = "";
+                request({ 
+                    host: "discord.com", 
+                    path: `/api/v10/guilds/${json["guild_id"]}/voice-states/@me`, 
+                    protocol: "https:", 
+                    headers: { 
+                        authorization: `Bot ${token}`, 
+                        "content-type": "application/json", 
+                        "user-agent": "DiscordBot (https://github.com/LanceNoble/Sing, 1.0)" 
+                        } }, (res) => {
+                    
+                    res.on("data", (chunk) => console.log(`${chunk}`));
+                }).end();
+                //req.on("error", (err) => console.log(err))
+
+                // const link = json["d"]["data"]["options"]["value"];
+                // try {
+                //     await open("song.opus");
+                // } catch (error) {
+                //     const file = await open("song.opus", constants.O_CREAT);
+                //     await file.close();
+                //     await rm("song.opus");
+                // }
             }
         }
     });
