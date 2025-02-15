@@ -86,18 +86,17 @@ request({ host: "discord.com", path: "/api/v10/gateway/bot", protocol: "https:",
 
             if (json["t"] == "INTERACTION_CREATE") {
                 raw = "";
-                request({ 
-                    host: "discord.com", 
-                    path: `/api/v10/guilds/${json["guild_id"]}/voice-states/@me`, 
-                    protocol: "https:", 
-                    headers: { 
-                        authorization: `Bot ${token}`, 
-                        "content-type": "application/json", 
-                        "user-agent": "DiscordBot (https://github.com/LanceNoble/Sing, 1.0)" 
-                        } }, (res) => {
-                    
+                const r = request({ host: "discord.com", path: `/api/v10/guilds/${json["d"]["guild_id"]}/voice-states/@me`, protocol: "https:", headers: { authorization: `Bot ${token}` } }, (res) => {
                     res.on("data", (chunk) => console.log(`${chunk}`));
-                }).end();
+                    res.on("end", () => {
+
+                    });
+                })
+                // r.write(JSON.stringify({
+
+                // }));
+
+                r.end();
                 //req.on("error", (err) => console.log(err))
 
                 // const link = json["d"]["data"]["options"]["value"];
