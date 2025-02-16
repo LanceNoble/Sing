@@ -87,15 +87,11 @@ request({ host: "discord.com", path: "/api/v10/gateway/bot", protocol: "https:",
             if (json["t"] == "INTERACTION_CREATE") {
                 raw = "";
                 const r = request({ host: "discord.com", path: `/api/v10/guilds/${json["d"]["guild_id"]}/voice-states/@me`, protocol: "https:", headers: { authorization: `Bot ${token}` } }, (res) => {
-                    res.on("data", (chunk) => console.log(`${chunk}`));
+                    res.on("data", (chunk) => raw += chunk);
                     res.on("end", () => {
-
+                        const json = JSON.parse(raw);
                     });
                 })
-                // r.write(JSON.stringify({
-
-                // }));
-
                 r.end();
                 //req.on("error", (err) => console.log(err))
 
