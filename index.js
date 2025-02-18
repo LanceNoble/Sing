@@ -52,42 +52,52 @@ async function pipe(code, exe, out) {
     });
 }
 
-
+function getAsync(url, options) {
+    return new Promise((resolve, reason) => {
+        get(url, options, (res) => {
+            let raw = "";
+            res.on("data", (chunk) => raw += chunk);
+            res.on("end", () => resolve(JSON.parse(raw)));
+        })
+    })    
+}
 const token = readFileSync("./token", { encoding: "utf8" });
-get("https://discord.com/api/v10/gateway/bot", { headers: { authorization: `Bot ${token}` } }, (res) => {
-    let raw = "";
-    res.on("data", (chunk) => raw += chunk);
-    res.on("end", () => {
-        const ws = new WebSocket(`${JSON.parse(raw)["url"]}/?v=10&encoding=json`);
-        ws.onmessage = async (msg) => {
-            const json = JSON.parse(msg.data);
-            if (json["op"] == 10) {
-                setTimeout(() => {
-                    ws.send(JSON.stringify({ op: 1, d: json["s"] }));
-                    ws.send(JSON.stringify({ op: 2, d: { token: token, intents: 1 << 7, properties: { os: "windows", browser: "nujabes", device: "nujabes" } } }));
-                    setInterval(() => ws.send(JSON.stringify({ op: 1, d: json["s"] })), json["d"]["heartbeat_interval"]);
-                }, json["d"]["heartbeat_interval"] * 0/*Math.random()*/);
-            }
-            if (json["op"] == 1) {
-                ws.send(JSON.stringify({ op: 1, d: json["s"] }));
-            }
-            if (json["t"] == "INTERACTION_CREATE") {
-                raw = "";
-                get(`https://discord.com/api/v10/guilds/${json["d"]["guild_id"]}/voice-states/@me`, { headers: { authorization: `Bot ${token}` } }, (res) => {
-                    res.on("data", (chunk) => raw += chunk);
-                    res.on("end", () => {
-                        const json = JSON.parse(raw);
-                        if (json["code"] == 10065) {
-                            
-                        } else {
+console.log(await getAsync("https://discord.com/api/v10/gateway/bot", { headers: { authorization: `Bot ${token}` } }));
 
-                        }
-                    });
-                });
-            }
-        };
-    });
-})
+// get("https://discord.com/api/v10/gateway/bot", { headers: { authorization: `Bot ${token}` } }, (res) => {
+//     let raw = "";
+//     res.on("data", (chunk) => raw += chunk);
+//     res.on("end", () => {
+//         const ws = new WebSocket(`${JSON.parse(raw)["url"]}/?v=10&encoding=json`);
+//         ws.onmessage = async (msg) => {
+//             const json = JSON.parse(msg.data);
+//             if (json["op"] == 10) {
+//                 setTimeout(() => {
+//                     ws.send(JSON.stringify({ op: 1, d: json["s"] }));
+//                     ws.send(JSON.stringify({ op: 2, d: { token: token, intents: 1 << 7, properties: { os: "windows", browser: "nujabes", device: "nujabes" } } }));
+//                     setInterval(() => ws.send(JSON.stringify({ op: 1, d: json["s"] })), json["d"]["heartbeat_interval"]);
+//                 }, json["d"]["heartbeat_interval"] * 0/*Math.random()*/);
+//             }
+//             if (json["op"] == 1) {
+//                 ws.send(JSON.stringify({ op: 1, d: json["s"] }));
+//             }
+//             if (json["t"] == "INTERACTION_CREATE") {
+//                 raw = "";
+//                 get(`https://discord.com/api/v10/guilds/${json["d"]["guild_id"]}/voice-states/@me`, { headers: { authorization: `Bot ${token}` } }, (res) => {
+//                     res.on("data", (chunk) => raw += chunk);
+//                     res.on("end", () => {
+//                         const json = JSON.parse(raw);
+//                         if (json["code"] == 10065) {
+                            
+//                         } else {
+
+//                         }
+//                     });
+//                 });
+//             }
+//         };
+//     });
+// })
 // request({ host: "discord.com", path: "/api/v10/gateway/bot", protocol: "https:", headers: { authorization: `Bot ${token}` } }, (res) => {
 //     res.on("end", () => {
 //         ws.onmessage = async (msg) => {
