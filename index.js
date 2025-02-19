@@ -4,100 +4,41 @@ import { constants, readFileSync } from "node:fs";
 import { exec } from "node:child_process";
 import { open, rm } from "node:fs/promises";
 
-async function pipe(code, exe, out) {
-    const pages = [];
-
-    let i = 0;
-    let raw = Buffer.alloc(0);
-
-    const file = await open(`${out}${code}.opus`, constants.O_CREAT);
-    if (file.fd == -1) {
-        return pages;
-    }
-
-    const process = exec(`${exe} ${code} -x -o "${out}${code}"`, async (error, stdout, stderr) => {
-        console.log(stdout)
-        console.log(error)
-        console.log(stderr)
-        console.log(pages.length)
-        await file.close();
-        await rm(`${out}${code}.opus`);
-        return pages;
-    });
-
-    setInterval(async function () {
-        let chunk = await file.read();
-        while (chunk.bytesRead > 0) {
-            raw = Buffer.concat([raw, Buffer.from(chunk.buffer.buffer, 0, chunk.bytesRead)]);
-            chunk = await file.read();
-        }
-        if (process.exitCode != null) {
-            clearInterval(this);
-        }
-    });
-
-    setInterval(function () {
-        while (i < raw.byteLength) {
-            const bounds = strip(raw, i);
-            i = bounds[0]
-            if (bounds[1] > 0) {
-                console.log(i)
-                pages.push(i);
-            }
-            i += bounds[1];
-        }
-        if (process.exitCode != null) {
-            clearInterval(this);
-        }
-    });
-}
-
-function getAsync(url, options) {
+function fetch(url, options) {
     return new Promise((resolve, reason) => {
         get(url, options, (res) => {
             let raw = "";
             res.on("data", (chunk) => raw += chunk);
             res.on("end", () => resolve(JSON.parse(raw)));
-        })
-    })    
+        });
+    });
 }
+
 const token = readFileSync("./token", { encoding: "utf8" });
-console.log(await getAsync("https://discord.com/api/v10/gateway/bot", { headers: { authorization: `Bot ${token}` } }));
+const gate = await fetch("https://discord.com/api/v10/gateway/bot", { headers: { authorization: `Bot ${token}` } });
+const ws = new WebSocket(`${gate["url"]}/?v=10&encoding=json`);
 
-// get("https://discord.com/api/v10/gateway/bot", { headers: { authorization: `Bot ${token}` } }, (res) => {
-//     let raw = "";
-//     res.on("data", (chunk) => raw += chunk);
-//     res.on("end", () => {
-//         const ws = new WebSocket(`${JSON.parse(raw)["url"]}/?v=10&encoding=json`);
-//         ws.onmessage = async (msg) => {
-//             const json = JSON.parse(msg.data);
-//             if (json["op"] == 10) {
-//                 setTimeout(() => {
-//                     ws.send(JSON.stringify({ op: 1, d: json["s"] }));
-//                     ws.send(JSON.stringify({ op: 2, d: { token: token, intents: 1 << 7, properties: { os: "windows", browser: "nujabes", device: "nujabes" } } }));
-//                     setInterval(() => ws.send(JSON.stringify({ op: 1, d: json["s"] })), json["d"]["heartbeat_interval"]);
-//                 }, json["d"]["heartbeat_interval"] * 0/*Math.random()*/);
-//             }
-//             if (json["op"] == 1) {
-//                 ws.send(JSON.stringify({ op: 1, d: json["s"] }));
-//             }
-//             if (json["t"] == "INTERACTION_CREATE") {
-//                 raw = "";
-//                 get(`https://discord.com/api/v10/guilds/${json["d"]["guild_id"]}/voice-states/@me`, { headers: { authorization: `Bot ${token}` } }, (res) => {
-//                     res.on("data", (chunk) => raw += chunk);
-//                     res.on("end", () => {
-//                         const json = JSON.parse(raw);
-//                         if (json["code"] == 10065) {
-                            
-//                         } else {
+ws.onmessage = async (msg) => {
+    const json = JSON.parse(msg.data);
+    if (json["op"] == 10) {
+        setTimeout(() => {
+            ws.send(JSON.stringify({ op: 1, d: json["s"] }));
+            ws.send(JSON.stringify({ op: 2, d: { token: token, intents: 1 << 7, properties: { os: "windows", browser: "nujabes", device: "nujabes" } } }));
+            setInterval(() => ws.send(JSON.stringify({ op: 1, d: json["s"] })), json["d"]["heartbeat_interval"]);
+        }, json["d"]["heartbeat_interval"] * 0/*Math.random()*/);
+    }
+    if (json["op"] == 1) {
+        ws.send(JSON.stringify({ op: 1, d: json["s"] }));
+    }
+    if (json["t"] == "INTERACTION_CREATE") {
+        const state = await fetch(`https://discord.com/api/v10/guilds/${json["d"]["guild_id"]}/voice-states/@me`, { headers: { authorization: `Bot ${token}` } });
+        if (state["code"] == 10065) {
+            
+        } else {
 
-//                         }
-//                     });
-//                 });
-//             }
-//         };
-//     });
-// })
+        }
+    }
+}
 // request({ host: "discord.com", path: "/api/v10/gateway/bot", protocol: "https:", headers: { authorization: `Bot ${token}` } }, (res) => {
 //     res.on("end", () => {
 //         ws.onmessage = async (msg) => {
