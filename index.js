@@ -1,8 +1,6 @@
 import { get } from "node:https";
 import { WebSocket } from "node:http";
-import { constants, readFileSync } from "node:fs";
-import { exec } from "node:child_process";
-import { open, rm } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 
 function fetch(url, options) {
     return new Promise((resolve, reason) => {
@@ -33,12 +31,13 @@ ws.onmessage = async (msg) => {
     if (json["t"] == "INTERACTION_CREATE") {
         const state = await fetch(`https://discord.com/api/v10/guilds/${json["d"]["guild_id"]}/voice-states/@me`, { headers: { authorization: `Bot ${token}` } });
         if (state["code"] == 10065) {
-            
+
         } else {
 
         }
     }
 }
+
 // request({ host: "discord.com", path: "/api/v10/gateway/bot", protocol: "https:", headers: { authorization: `Bot ${token}` } }, (res) => {
 //     res.on("end", () => {
 //         ws.onmessage = async (msg) => {
