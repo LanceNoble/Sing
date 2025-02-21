@@ -29,9 +29,17 @@ ws.onmessage = async (msg) => {
         ws.send(JSON.stringify({ op: 1, d: json["s"] }));
     }
     if (json["t"] == "INTERACTION_CREATE") {
+        // Get Voice State of Bot
+        // Get Voice State of User
+        // If User isn't in VC, cancel
+        // If Bot isn't in VC, join bot to channel user is in
         const state = await fetch(`https://discord.com/api/v10/guilds/${json["d"]["guild_id"]}/voice-states/@me`, { headers: { authorization: `Bot ${token}` } });
         if (state["code"] == 10065) {
-
+            
+            // ws.send(JSON.stringify({op: 4, d: {
+            //     guild_id: json["d"]["guild_id"],
+            //     channel_id: json["d"]["channel_id"],
+            // }}));
         } else {
 
         }
