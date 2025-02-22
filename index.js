@@ -33,6 +33,7 @@ ws.onmessage = async (msg) => {
         // Get Voice State of User
         // If User isn't in VC, cancel
         // If Bot isn't in VC, join bot to channel user is in
+        let userState;
         const state = await fetch(`https://discord.com/api/v10/guilds/${json["d"]["guild_id"]}/voice-states/@me`, { headers: { authorization: `Bot ${token}` } });
         if (state["code"] == 10065) {
             
